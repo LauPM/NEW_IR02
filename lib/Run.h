@@ -85,7 +85,10 @@ namespace ana
 
          if (adcmode == "DT5725")
          {
-            ParSet->setConversionFactor(-(16384.0 / 2.0) * 50.0);
+            //   ParSet->setConversionFactor(-(16384.0/2.0)*3300.0); //SC
+            //   ParSet->setConversionFactor(-(16384.0/2.0)*1020.72378595732); //SC
+            // ParSet->setConversionFactor(-(16384.0/2.0)*50.0); // PMT
+              ParSet->setConversionFactor(-(16384.0/2.0)*250.0); // SiPM
             ADCDynamicRange = 16384;
             ParSet->setBaselineAmpLimit(24);
             Sampling = 4e-9;

@@ -1,50 +1,176 @@
+/*
+Macro para obtener la waveform promedio de un run.
+La macro lee los ficheros con los runes guardados en ROOT, y crea un fichero en AnalysisROOT con los perfiles de centelleo para todos los canales.
+*/
+
 #include "lib/headers.h"
 
-void Analyse(string adc, string path, string output, int r, int ch, int pedestal, double range1, double range2, std::vector<bool> conditions)
-{ /* Macro para obtener la waveform promedio de un run.
-    La macro lee los ficheros con los runes guardados en ROOT, y crea un fichero en AnalysisROOT con los perfiles de centelleo para todos los canales.
-  */
+void Analyse(int r, double range1, double range2, std::vector<int> triggerchannels, int NEvts = -1, string adc = "DT5725")
+{
 
-  ana::Run_t myrun(r,{{path+Form("run%i_ch%i.root",r,ch),"ADC0"}}, adc, range1, range2, ped, -1);
-
-  // Variables requeridas para todas las funciones que s emuestran a continuación
-  std::vector<double> SPEAmp = {38.6, 24.8, 25.5}; myrun.SetSPEAmps(SPEAmp);
+  std::vector<double> Gains = {0.56, 3.61, 3.83};  // ganancias en pC
+  std::vector<double> SPEAmp = {38.6, 24.8, 25.5}; // Amplitud del SPE en cuentas de ADC
+  for (int i = 0; i < 3; i++)
+    Gains[i] = Gains[i] / 1.602e-7; //(1e-19+12)
+  // ana::Run_t myrun(r, {{Form("/pnfs/ciemat.es/data/neutrinos/Super-cells_LAr/Feb22/ROOT/run%02i_ch4.root", r), "ADC2"}}, adc, range1, range2, 250, -1);
+	ana::Run_t myrun(r,{{Form("/pc/choozdsk01/palomare/SiPM/SC_Fuente_Alpha_Dic/ROOT/run%02i_ch5.root",r),"ADC0"}},adc,range1, range2,450,-1); //250 ara ventana 2us
+  myrun.SetGains(Gains);
+  myrun.SetSPEAmps(SPEAmp);
   myrun.SelectChannels({0});
+  //  myrun.PlotPeakTimes();
+  //  myrun.Process();
+  //~myrun.SetCutPedSTD();
+  //~myrun.SetCutVariableVector("PreTriggerSTD",std::map<int,std::pair<double,double>>({{0,{0,4}},{1,{0,4.5}},{2,{0,4.5}}}) );
+  //  myrun.SetCutTriggerWaveformCuts(triggerchannels);
+  //~myrun.SetCutMaxAmplitudeRange(30,2000000);
+  //~myrun.SetCutPeakTimeRange();
+  // if(NEvts!=-1)
+  myrun.ParSet->setADCAmplitudeThreshold(-1000);
+	// myrun.SetCutMaxAmplitude(12300, 13700);
+	myrun.SetCutMaxAmplitude(12300, 16000);
 
-
-  if (conditions[0] == true){myrun.SetCutMaxAmplitudeRange(min_amp,max_amp);}
-  if (conditions[1] == true){myrun.SetMaximumWaveformsToProcess(-1);}
-  if (conditions[2] == true){myrun.ParSet->setADCAmplitudeThreshold(-1000);}
-  if (conditions[3] == true){myrun.Plot36("ScintProfFirstSignalBin", Form(path+"run%i_"+output+".root", r), 0, 1);
-  
+  // myrun.SetMaximumWaveformsToProcess(1);
+  //  myrun.LoopWaveformsPMT(0);
+  // myrun.Plot36("ScintProfFirstSignalBin",Form("/pnfs/ciemat.es/data/neutrinos/Super-cells_LAr/Feb22/AnalysisROOT/run%02i_ScintProfFirstSignalBin_PMT.root",r),0,0);
+  myrun.Plot36("ScintProfFirstSignalBin",Form("/pc/choozdsk01/palomare/SiPM/SC_Fuente_Alpha_Dic/AnalysisROOT/run%02i_ScintProfFirstSignalBin_PMT_cut.root",r),0,0);
+  // myrun.Plot36("ScintProfFirstSignalBin", Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin.root", r), 0, 1);
+  // myrun.Plot36("ScintProf", Form("AnalysisROOT/Run%i_ScintProf.root", r), 0, 1);
+  //    myrun.Plot36("ScintProfFirstSignalBin_NotNormalize",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_NotNormalize.root",r),0,0);
   myrun.Close();
 }
-
-void AverageWaveform(string input = "config_file.txt")
+void Analyse_min_max_given(int r, double range1, double range2, std::vector<int> triggerchannels, int NEvts = -1, string adc = "DT5725", double amp1 = 30, double amp2 = 30000, TString t = "")
 {
-  int irun; int frun; int ch; int ped; int min_amp; int max_amp;
-  irun = IntInput(input, "I_RUN"); frun = IntInput(input, "F_RUN"); ch = IntInput(input, "CHANNEL"); ped = IntInput(input, "PEDESTAL_RANGE");
-  min_amp = IntInput(input, "MIN_AMP"); max_amp = IntInput(input, "MAX_AMP");
-  double isignaltime; double fsignaltime;
-  isignaltime = DoubleInput(input, "I_SIGNALTIME"); fsignaltime = DoubleInput(input, "F_SIGNALTIME");
 
-  string adc; string path;
-  adc = StringInput(input, "ADC"); path = StringInput(input, "PATH"); output = StringInput(input, "OUTPUT_FILE")
+  std::vector<double> Gains = {0.56, 3.61, 3.83};  // ganancias en pC
+  std::vector<double> SPEAmp = {38.6, 24.8, 25.5}; // Amplitud del SPE en cuentas de ADC
+  for (int i = 0; i < 3; i++)
+    Gains[i] = Gains[i] / 1.602e-7; //(1e-19+12)
 
-  std::vector<string> keywords; std::vector<bool> conditions; conditions = {};
-  keywords = {"PLOT_PEDESTALS","PLOT_PEAKTIMES","CHARGE_HIST","CHARGE_HIST_AUTOFIT","MAX_AMP_HIST","EVENT_DISPLAY"};
+  ana::Run_t myrun(r, {{Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/May2021/ROOT/RUN%i_ch2.root", r), "ADC0"}, {Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/May2021/ROOT/RUN%i_ch4.root", r), "ADC1"}, {Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/May2021/ROOT/RUN%i_ch5.root", r), "ADC2"}}, adc, range1, range2, 250, 200);
+  //~ana::Run_t myrun(r,{{Form("ROOT/Calibration20210501_ch4_%i.root",r),"ADC2"}},adc,range1, range2,30,30000);//calibrations SiPM
+  //~ana::Run_t myrun(r,{{Form("ROOT/Calibration20210501_ch2_%i.root",r),"ADC2"}},adc,range1, range2,30,30000);//calibrations PMT
+  myrun.SetGains(Gains);
+  myrun.SetSPEAmps(SPEAmp);
+  myrun.SelectChannels({0});
+  //~myrun.SelectChannels(triggerchannels);
+  //  myrun.PlotPeakTimes();
+  //  myrun.Process();
+  //~myrun.SetCutPedSTD();
+  //~myrun.SetCutVariableVector("PreTriggerSTD",std::map<int,std::pair<double,double>>({{0,{0,4}},{1,{0,4.5}},{2,{0,4.5}}}) );
+  //  myrun.SetCutTriggerWaveformCuts(triggerchannels);
+  //~myrun.SetCutMaxAmplitudeRange(amp1,amp2);
+  //~myrun.SetCutChargeRange(0.4e-12,1e-12);
+  //~myrun.SetCutPeakTimeRange();
+  myrun.SetCutVariable("TEndMaxPeakRange", amp1, amp2);
 
-  for(vector<string>::const_iterator key = keywords.begin(); key != keywords.end(); ++key)
-  {bool condition; condition = BoolInput(input, *key); conditions.push_back(condition);}
+  // if(NEvts!=-1)
+  myrun.SetMaximumWaveformsToProcess(NEvts);
+  //  myrun.LoopWaveformsPMT(0);
+  myrun.ParSet->setADCAmplitudeThreshold(25);
 
-  for (int run=irun; run<=frun; r++) Analyse(adc, path, output, run, ch, ped, isignaltime, fsignaltime, min_amp, max_amp, conditions;
-  /*  0.  Path de la carpeta que incluye los archivos .root
-      1.  Numero de Run
-      2.  Canal del ADC que figura en el nombre del .root
-      3.  Rango de tiempo que caracteriza el pedestal (en unidades de 4us)
-      3.  Tiempo inicial donde empezar a buscar la señal de trigger (s)
-      4.  Tiempo final donde dejar de buscar la señal de trigger (s)
-      5.  Path de la carpeta que incluye los archivos .root
-      6.  Vector de condiciones (0/1 false/true) para activar las funciones en orden de pariencia.
+  myrun.Plot36("ScintProfFirstSignalBin", Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_%s.root", r, t.Data()), 0, 0);
+  myrun.Plot36("ScintProf", Form("AnalysisROOT/Run%i_ScintProf_%s.root", r, t.Data()), 0, 0);
+  //    myrun.Plot36("ScintProfFirstSignalBin_NotNormalize",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_NotNormalize.root",r),0,0);
+  myrun.Close();
+}
+void AnalyseOsc(int r, double range1, double range2, std::vector<int> triggerchannels, int NEvts = -1, string adc = "Osc")
+{
+
+  std::vector<double> Gains = {0.56, 3.61, 3.83};  // ganancias en pC
+  std::vector<double> SPEAmp = {38.6, 24.8, 25.5}; // Amplitud del SPE en cuentas de ADC
+  for (int i = 0; i < 3; i++)
+    Gains[i] = Gains[i] / 1.602e-7; //(1e-19+12)
+  ana::Run_t myrun(r, {{Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch1.root", r), "ADC0"}, {Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch2.root", r), "ADC1"}, {Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch3.root", r), "ADC2"}}, adc, range1, range2, 150, 2000);
+  myrun.SetGains(Gains);
+  myrun.SetSPEAmps(SPEAmp);
+  myrun.SelectChannels(triggerchannels);
+  //  myrun.PlotPeakTimes();
+  //  myrun.SetCutPedSTD();
+  //  myrun.SetCutVariableVector("PreTriggerSTD",std::map<int,std::pair<double,double>>({{0,{0,4.5}},{1,{0,4.5}},{2,{0,4}}}) );
+  //  myrun.SetCutTriggerWaveformCuts(triggerchannels);
+  //  myrun.SetCutMaxAmplitudeRange(20,2000000);
+  // myrun.SetCutPeakTimeRange();
+  // if(NEvts!=-1)
+  //  myrun.SetMaximumWaveformsToProcess(6000);
+  myrun.ParSet->setADCAmplitudeThreshold(0.03);
+  myrun.Process();
+  //  myrun.PlotPedSTDs();
+  //  myrun.LoopWaveforms();
+  //  myrun.Plot36("AmpRange","",0,1,"",0,1);
+
+  myrun.LoopWaveformsPMT(0);
+  //  myrun.Plot36("ScintProfFirstSignalBin",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin.root",r),0,0);
+  //  myrun.Plot36("ScintProf",Form("AnalysisROOT/Run%i_ScintProf.root",r),0,0);
+  //    myrun.Plot36("ScintProfFirstSignalBin_NotNormalize",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_NotNormalize.root",r),0,0);
+  myrun.Close();
+}
+void AnalyseOsc12(int r, double range1, double range2, std::vector<int> triggerchannels, int NEvts = -1, string adc = "Osc")
+{
+
+  std::vector<double> Gains = {0.56, 3.61, 3.83};  // ganancias en pC
+  std::vector<double> SPEAmp = {38.6, 24.8, 25.5}; // Amplitud del SPE en cuentas de ADC
+  for (int i = 0; i < 3; i++)
+    Gains[i] = Gains[i] / 1.602e-7; //(1e-19+12)
+  ana::Run_t myrun(r, {{Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch1.root", r), "ADC0"}, {Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch2.root", r), "ADC1"}}, adc, range1, range2, 30, 2000);
+  myrun.SetGains(Gains);
+  myrun.SetSPEAmps(SPEAmp);
+  //  myrun.SelectChannels(triggerchannels);
+  //~myrun.PlotPeakTimes();
+  //  myrun.SetCutPedSTD();
+  //  myrun.SetCutVariableVector("PreTriggerSTD",std::map<int,std::pair<double,double>>({{0,{0,4.5}},{1,{0,4.5}},{2,{0,4}}}) );
+  //  myrun.SetCutTriggerWaveformCuts(triggerchannels);
+  //  myrun.SetCutMaxAmplitudeRange(20,2000000);
+  // myrun.SetCutPeakTimeRange();
+  // if(NEvts!=-1)
+  //  myrun.SetMaximumWaveformsToProcess(6000);
+  myrun.ParSet->setADCAmplitudeThreshold(0.03);
+  myrun.Process();
+  //  myrun.PlotPedSTDs();
+  //  myrun.LoopWaveforms();
+  //  myrun.Plot36("AmpRange","",0,1,"",0,1);
+  //~myrun.LoopWaveformsPMT(0,0,"q");
+  //  myrun.Plot36("ScintProfFirstSignalBin",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin.root",r),0,0);
+  //  myrun.Plot36("ScintProf",Form("AnalysisROOT/Run%i_ScintProf.root",r),0,0);
+  //    myrun.Plot36("ScintProfFirstSignalBin_NotNormalize",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_NotNormalize.root",r),0,0);
+  myrun.Close();
+}
+void AnalyseOsc3(int r, double range1, double range2, std::vector<int> triggerchannels, int NEvts = -1, string adc = "Osc")
+{
+
+  std::vector<double> Gains = {0.4};   // 0.76,0.67 //ganancias de los PM en pC
+  std::vector<double> SPEAmp = {25.3}; // 3.2,3.1 //Amplitud del SPE a este voltaje
+  for (int i = 0; i < 3; i++)
+    Gains[i] = Gains[i] / 1.602e-7; //(1e-19+12)
+  ana::Run_t myrun(r, {{Form("/pnfs/ciemat.es/data/neutrinos/SiPM_dune_IR02/Feb2021/ROOT/RUN%i_ch3.root", r), "ADC2"}}, adc, range1, range2, 30, 2000);
+  myrun.SetGains(Gains);
+  myrun.SetSPEAmps(SPEAmp);
+  //  myrun.SelectChannels(triggerchannels);
+  //  myrun.PlotPeakTimes();
+  //  myrun.SetCutPedSTD();
+  //  myrun.SetCutVariableVector("PreTriggerSTD",std::map<int,std::pair<double,double>>({{0,{0,4.5}},{1,{0,4.5}},{2,{0,4}}}) );
+  //  myrun.SetCutTriggerWaveformCuts(triggerchannels);
+  //  myrun.SetCutMaxAmplitudeRange(20,2000000);
+  // myrun.SetCutPeakTimeRange();
+  // if(NEvts!=-1)
+  //  myrun.SetMaximumWaveformsToProcess(6000);
+  myrun.ParSet->setADCAmplitudeThreshold(0.03);
+  myrun.Process();
+  //  myrun.PlotPedSTDs();
+  //  myrun.LoopWaveforms();
+  //  myrun.Plot36("AmpRange","",0,1,"",0,1);
+  myrun.Plot36("ScintProfFirstSignalBin", Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin.root", r), 0, 0);
+  //  myrun.Plot36("ScintProf",Form("AnalysisROOT/Run%i_ScintProf.root",r),0,0);
+  //    myrun.Plot36("ScintProfFirstSignalBin_NotNormalize",Form("AnalysisROOT/Run%i_ScintProfFirstSignalBin_NotNormalize.root",r),0,0);
+  myrun.Close();
+}
+void AverageWaveform()
+{
+  /*Argumentos:
+  1. numero de Run
+  2. tiempo inicial donde empezar a buscar la señal de trigger (s)
+  3. tiempo final donde dejar de buscar la señal de trigger (s)
+  4. Canales de trigger, para limpiar ruido.
+  5. Versión del ADC usada (v1720 o DT5725)
   */
+  Analyse(181, 0.0, 1.0, {0}, 1);
 }
